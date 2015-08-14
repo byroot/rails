@@ -15,7 +15,7 @@ module ActionDispatch
 
     DEFAULT_PARSERS = {
       Mime::JSON => lambda { |raw_post|
-        data = ActiveSupport::JSON.decode(raw_post)
+        data = ActiveSupport::JSON.decode(remove_byte_order_mark(raw_post))
         data = {:_json => data} unless data.is_a?(Hash)
         Request::Utils.normalize_encode_params(data)
       }
@@ -45,6 +45,14 @@ module ActionDispatch
         logger(request).debug "Error occurred while parsing request parameters.\nContents:\n\n#{request.raw_post}"
 
         raise ParseError.new(e.message, e)
+      end
+
+      UTF8_BOM = "\xef\xbb\xbf".force_encoding(Encoding::BINARY).freeze
+      UTF8_BOM_SIZE = UTF8_BOM.bytesize
+
+      def self.remove_byte_order_mark(raw_text)
+        return raw_text unless raw_text.start_with?(UTF8_BOM)
+        raw_text.byteslice(UTF8_BOM_SIZE..-1)
       end
 
       def logger(request)

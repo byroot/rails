@@ -52,6 +52,13 @@ class JsonParamsParsingTest < ActionDispatch::IntegrationTest
     )
   end
 
+  test "UTF-8 byte order marks are stripped" do
+    assert_parses(
+      {"username" => "sikachu"},
+      "\xef\xbb\xbf{\"username\": \"sikachu\"}", { 'CONTENT_TYPE' => 'application/json' }
+    )
+  end
+
   test "logs error if parsing unsuccessful" do
     with_test_routing do
       output = StringIO.new
