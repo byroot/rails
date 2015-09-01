@@ -36,7 +36,7 @@ module ActiveRecord
       def closed?; true; end
       def open?; false; end
       def joinable?; false; end
-      def add_record(record); end
+      def add_record(record); p [:null, :add_record, record]; end
     end
 
     class Transaction #:nodoc:
@@ -53,6 +53,7 @@ module ActiveRecord
       end
 
       def add_record(record)
+        p [:transaction, :add_record, record];
         records << record
       end
 
@@ -61,6 +62,7 @@ module ActiveRecord
       end
 
       def rollback_records
+        p [:rollback_records]
         ite = records.uniq
         while record = ite.shift
           record.rolledback!(force_restore_state: full_rollback?)

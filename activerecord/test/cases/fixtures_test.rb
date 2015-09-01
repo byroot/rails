@@ -645,6 +645,49 @@ class FixturesBrokenRollbackTest < ActiveRecord::TestCase
     end
 end
 
+class FixturesDontRunAfterRollbackTest < ActiveRecord::TestCase
+  class PostWithAfterRollback < Post
+    attr_accessor :after_rollback_called, :fail_on_after_save
+
+    after_save { |record| raise ActiveRecord::Rollback if record.fail_on_after_save }
+
+    after_rollback { |record| record.after_rollback_called = true }
+  end
+
+  def blank_setup
+    @fixture_connections = [ActiveRecord::Base.connection]
+  end
+  alias_method :ar_setup_fixtures, :setup_fixtures
+  alias_method :setup_fixtures, :blank_setup
+  alias_method :setup, :blank_setup
+
+  def blank_teardown; end
+  alias_method :ar_teardown_fixtures, :teardown_fixtures
+  alias_method :teardown_fixtures, :blank_teardown
+  alias_method :teardown, :blank_teardown
+
+  def test_fixtures_transaction_doesnt_run_after_rollback
+    ar_setup_fixtures
+    record = PostWithAfterRollback.new(title: "Hello", body: "World!")
+    record.save!
+    ar_teardown_fixtures
+    refute record.after_rollback_called
+  end
+
+  def test_application_transactions_run_after_rollback
+    ar_setup_fixtures
+    record = PostWithAfterRollback.new(title: "Hello", body: "World!")
+    record.fail_on_after_save = true
+    record.save
+    ar_teardown_fixtures
+    assert record.after_rollback_called
+  end
+
+  private
+    def load_fixtures(config)
+    end
+end
+
 class LoadAllFixturesTest < ActiveRecord::TestCase
   def test_all_there
     self.class.fixture_path = FIXTURES_ROOT + "/all"
