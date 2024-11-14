@@ -16,7 +16,11 @@ module ActiveSupport
           if owner.equal?(self)
             value = new_value
           else
-            ::ActiveSupport::ClassAttribute.redefine(self, name, new_value)
+            if singleton_class?
+              redefine_method(name) { new_value }
+              public(name)
+            end
+            redefine_singleton_method(name) { new_value }
           end
         end
         owner.singleton_class.send(:public, "#{name}=")

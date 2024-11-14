@@ -29,6 +29,8 @@ class ClassAttributeTest < ActiveSupport::TestCase
   end
 
   test "overridable" do
+    assert_nil @klass.setting
+
     @sub.setting = 1
     assert_nil @klass.setting
     assert_equal 1, @sub.setting
