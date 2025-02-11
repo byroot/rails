@@ -16,6 +16,14 @@ module ActionDispatch
       end
 
       class Simulator # :nodoc:
+        DEFAULT_EXP = /[^.\/?]+/
+
+        STATIC_TOKENS = Array.new(64)
+        STATIC_TOKENS[".".ord] = "."
+        STATIC_TOKENS["/".ord] = "/"
+        STATIC_TOKENS["?".ord] = "?"
+        STATIC_TOKENS.freeze
+
         INITIAL_STATE = [ [0, nil] ].freeze
 
         attr_reader :tt
@@ -27,14 +35,19 @@ module ActionDispatch
         def memos(string)
           input = StringScanner.new(string)
           state = INITIAL_STATE
-          start_index = 0
 
-          while sym = input.scan(%r([/.?]|[^/.?]+))
-            end_index = start_index + sym.length
+          until input.eos?
+            start_index = input.pos
 
-            state = tt.move(state, string, start_index, end_index)
+            matches_default =
+              if (token = STATIC_TOKENS[string.getbyte(start_index)])
+                input.pos += 1
+                false
+              else
+                token = input.scan(DEFAULT_EXP)
+              end
 
-            start_index = end_index
+            state = tt.move(state, string, token, start_index, matches_default)
           end
 
           acceptance_states = state.each_with_object([]) do |s_d, memos|
