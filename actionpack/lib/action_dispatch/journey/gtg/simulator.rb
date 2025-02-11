@@ -2,8 +2,6 @@
 
 # :markup: markdown
 
-require "strscan"
-
 module ActionDispatch
   module Journey # :nodoc:
     module GTG # :nodoc:
@@ -33,21 +31,24 @@ module ActionDispatch
         end
 
         def memos(string)
-          input = StringScanner.new(string)
           state = INITIAL_STATE
 
-          until input.eos?
-            start_index = input.pos
+          pos = 0
+          eos = string.bytesize
 
-            matches_default =
-              if (token = STATIC_TOKENS[string.getbyte(start_index)])
-                input.pos += 1
-                false
-              else
-                token = input.scan(DEFAULT_EXP)
+          while pos < eos
+            start_index = pos
+            pos += 1
+            if (token = STATIC_TOKENS[string.getbyte(start_index)])
+              state = tt.move(state, string, token, start_index, false)
+            else
+              while pos < eos && STATIC_TOKENS[string.getbyte(pos)].nil?
+                pos += 1
               end
 
-            state = tt.move(state, string, token, start_index, matches_default)
+              token = string.byteslice(start_index, pos - start_index)
+              state = tt.move(state, string, token, start_index, true)
+            end
           end
 
           acceptance_states = state.each_with_object([]) do |s_d, memos|
