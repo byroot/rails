@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "objspace"
 require "cases/helper"
 
 class TestRecord < ActiveRecord::Base
@@ -17,15 +18,19 @@ class TestDisconnectedAdapter < ActiveRecord::TestCase
   unless in_memory_db?
     test "reconnects to execute statements when disconnected" do
       @connection.execute "SELECT count(*) from products"
-      first_connection = @connection.instance_variable_get(:@raw_connection).__id__
+      p first_connection = @connection.instance_variable_get(:@raw_connection).__id__
 
       @connection.disconnect!
       assert_nil @connection.instance_variable_get(:@raw_connection)
 
       @connection.execute "SELECT count(*) from products"
-      second_connection = @connection.instance_variable_get(:@raw_connection).__id__
+      puts ObjectSpace.dump(@connection.instance_variable_get(:@raw_connection))
+      GC.stress = true
+      p second_connection = @connection.instance_variable_get(:@raw_connection).__id__
+      puts ObjectSpace.dump(@connection.instance_variable_get(:@raw_connection))
 
       assert_not_equal second_connection, first_connection
+      GC.stress = false
     end
   end
 end
