@@ -167,7 +167,7 @@ module ActiveModel
       end
 
       def changed_from_assignment?
-        assigned? && type.changed?(original_value, value, value_before_type_cast)
+        assigned? && type.changed?(original_attribute, value, value_before_type_cast)
       end
 
       def _value_for_database

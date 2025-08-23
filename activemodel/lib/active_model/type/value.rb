@@ -81,8 +81,8 @@ module ActiveModel
       # Determines whether a value has changed for dirty checking. +old_value+
       # and +new_value+ will always be type-cast. Types should not need to
       # override this method.
-      def changed?(old_value, new_value, _new_value_before_type_cast)
-        old_value != new_value
+      def changed?(old_attribute, new_value, _new_value_before_type_cast)
+        old_attribute.original_value != new_value
       end
 
       # Determines whether the mutable value has been modified since it was
