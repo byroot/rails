@@ -89,18 +89,33 @@ module ActiveJob
         when ActiveSupport::HashWithIndifferentAccess
           serialize_indifferent_hash(argument)
         when Hash
-          symbol_keys = argument.keys
-          symbol_keys.select! { |k| k.is_a?(Symbol) }
-          symbol_keys.map!(&:name)
+          if argument.empty?
+            argument
+          elsif argument.all? { |k, _| k.is_a?(Symbol) }
+            # Fast path, all keys are symbols
+            result = argument.transform_keys(&:name)
+            result.transform_values! { |v| serialize_argument(v) }
+            aj_hash_key = if Hash.ruby2_keywords_hash?(argument)
+              RUBY2_KEYWORDS_KEY
+            else
+              SYMBOL_KEYS_KEY
+            end
 
-          aj_hash_key = if Hash.ruby2_keywords_hash?(argument)
-            RUBY2_KEYWORDS_KEY
+            result[aj_hash_key] = true
           else
-            SYMBOL_KEYS_KEY
+            symbol_keys = argument.keys
+            symbol_keys.select! { |k| k.is_a?(Symbol) }
+            symbol_keys.map!(&:name)
+
+            aj_hash_key = if Hash.ruby2_keywords_hash?(argument)
+              RUBY2_KEYWORDS_KEY
+            else
+              SYMBOL_KEYS_KEY
+            end
+            result = serialize_hash(argument)
+            result[aj_hash_key] = symbol_keys
+            result
           end
-          result = serialize_hash(argument)
-          result[aj_hash_key] = symbol_keys
-          result
         else
           if argument.respond_to?(:permitted?) && argument.respond_to?(:to_h)
             serialize_indifferent_hash(argument.to_h)
