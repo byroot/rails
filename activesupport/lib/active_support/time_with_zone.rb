@@ -57,6 +57,7 @@ module ActiveSupport
         @utc = nil
         @period = get_period_and_ensure_valid_local_time(period)
       end
+      @is_utc = zone == "UTC" || zone == "UCT"
     end
 
     # Returns a <tt>Time</tt> instance that represents the time in +time_zone+.
@@ -108,7 +109,7 @@ module ActiveSupport
     #   Time.zone = 'Eastern Time (US & Canada)'    # => 'Eastern Time (US & Canada)'
     #   Time.zone.now.utc?                          # => false
     def utc?
-      zone == "UTC" || zone == "UCT"
+      @is_utc
     end
     alias_method :gmt?, :utc?
 
@@ -152,18 +153,11 @@ module ActiveSupport
     #   Time.zone.now.xmlschema  # => "2014-12-04T11:02:37-05:00"
     def xmlschema(fraction_digits = 0)
       utc_str = time.iso8601(fraction_digits || 0)
-      unless @utc
+      unless @is_utc
         utc_str[-1] = ""
         utc_str << formatted_offset(true, 'Z')
       end
       utc_str
-      
-      # if utc?
-      #   @utc.iso8601(fraction_digits)
-      # else
-      #   str =
-      #   "#{time.strftime(PRECISIONS[fraction_digits.to_i])}#{formatted_offset(true, 'Z')}"
-      # end
     end
     alias_method :iso8601, :xmlschema
     alias_method :rfc3339, :xmlschema
