@@ -57,9 +57,7 @@ module ActiveSupport
         @utc = nil
         @period = get_period_and_ensure_valid_local_time(period)
       end
-      if @is_utc = zone == "UTC" || zone == "UCT"
-        utc
-      end
+      @is_utc = zone == "UTC" || zone == "UCT"
     end
 
     # Returns a <tt>Time</tt> instance that represents the time in +time_zone+.
@@ -155,7 +153,7 @@ module ActiveSupport
     #   Time.zone.now.xmlschema  # => "2014-12-04T11:02:37-05:00"
     def xmlschema(fraction_digits = 0)
       if @is_utc
-        @utc.iso8601(fraction_digits || 0)
+        utc.iso8601(fraction_digits || 0)
       else
         str = time.iso8601(fraction_digits || 0)
         str[-1] = formatted_offset(true, 'Z')
