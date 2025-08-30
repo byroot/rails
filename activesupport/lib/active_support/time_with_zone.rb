@@ -152,12 +152,13 @@ module ActiveSupport
     #
     #   Time.zone.now.xmlschema  # => "2014-12-04T11:02:37-05:00"
     def xmlschema(fraction_digits = 0)
-      utc_str = time.iso8601(fraction_digits || 0)
-      unless @is_utc
-        utc_str[-1] = ""
-        utc_str << formatted_offset(true, 'Z')
+      if @is_utc
+        @utc.iso8601(fraction_digits || 0)
+      else
+        str = time.iso8601(fraction_digits || 0)
+        str[-1] = formatted_offset(true, 'Z')
+        str
       end
-      utc_str
     end
     alias_method :iso8601, :xmlschema
     alias_method :rfc3339, :xmlschema
