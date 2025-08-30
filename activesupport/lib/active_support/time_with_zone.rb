@@ -49,9 +49,14 @@ module ActiveSupport
     attr_reader :time_zone
 
     def initialize(utc_time, time_zone, local_time = nil, period = nil)
-      @utc = utc_time ? transfer_time_values_to_utc_constructor(utc_time) : nil
       @time_zone, @time = time_zone, local_time
-      @period = @utc ? period : get_period_and_ensure_valid_local_time(period)
+      if utc_time
+        @utc = transfer_time_values_to_utc_constructor(utc_time)
+        @period = period
+      else
+        @utc = nil
+        @period = get_period_and_ensure_valid_local_time(period)
+      end
     end
 
     # Returns a <tt>Time</tt> instance that represents the time in +time_zone+.
@@ -146,7 +151,19 @@ module ActiveSupport
     #
     #   Time.zone.now.xmlschema  # => "2014-12-04T11:02:37-05:00"
     def xmlschema(fraction_digits = 0)
-      "#{time.strftime(PRECISIONS[fraction_digits.to_i])}#{formatted_offset(true, 'Z')}"
+      utc_str = time.iso8601(fraction_digits || 0)
+      unless utc?
+        utc_str[-1] = ""
+        utc_str << formatted_offset(true, 'Z')
+      end
+      utc_str
+      
+      # if utc?
+      #   @utc.iso8601(fraction_digits)
+      # else
+      #   str =
+      #   "#{time.strftime(PRECISIONS[fraction_digits.to_i])}#{formatted_offset(true, 'Z')}"
+      # end
     end
     alias_method :iso8601, :xmlschema
     alias_method :rfc3339, :xmlschema
@@ -560,7 +577,9 @@ module ActiveSupport
       SECONDS_PER_DAY = 86400
 
       def incorporate_utc_offset(time, offset)
-        if time.kind_of?(Date)
+        if offset.zero?
+          time
+        elsif time.kind_of?(Date)
           time + Rational(offset, SECONDS_PER_DAY)
         else
           time + offset
