@@ -69,26 +69,24 @@ module ActiveJob
         :SYMBOL_KEYS_KEY, :RUBY2_KEYWORDS_KEY, :WITH_INDIFFERENT_ACCESS_KEY
 
       def serialize_argument(argument)
+        # Types that can't be subclassed
         case argument
-        when nil, true, false, Integer, Float # Types that can hardly be subclassed
+        when nil, true, false, Integer, Float
+          return argument
+        when Symbol
+          return { "_aj_serialized" => "SymbolSerializer", "value" => argument.name }
+        when Module
+          return { "_aj_serialized" => "ModuleSerializer", "value" => argument }
+        end
+
+        klass = argument.class
+        if klass == String
           argument
-        when String
-          if argument.class == String
-            argument
-          else
-            begin
-              Serializers.serialize(argument)
-            rescue SerializationError
-              argument
-            end
-          end
-        when GlobalID::Identification
-          convert_to_global_id_hash(argument)
-        when Array
+        elsif klass == Array
           argument.map { |arg| serialize_argument(arg) }
-        when ActiveSupport::HashWithIndifferentAccess
+        elsif klass == ActiveSupport::HashWithIndifferentAccess
           serialize_indifferent_hash(argument)
-        when Hash
+        elsif klass == Hash
           symbol_keys = argument.keys
           symbol_keys.select! { |k| k.is_a?(Symbol) }
           symbol_keys.map!(&:name)
@@ -101,6 +99,8 @@ module ActiveJob
           result = serialize_hash(argument)
           result[aj_hash_key] = symbol_keys
           result
+        elsif GlobalID::Identification === argument
+          convert_to_global_id_hash(argument)
         else
           if argument.respond_to?(:permitted?) && argument.respond_to?(:to_h)
             serialize_indifferent_hash(argument.to_h)
