@@ -57,7 +57,9 @@ module ActiveSupport
         @utc = nil
         @period = get_period_and_ensure_valid_local_time(period)
       end
-      @is_utc = zone == "UTC" || zone == "UCT"
+      if @is_utc = zone == "UTC" || zone == "UCT"
+        utc
+      end
     end
 
     # Returns a <tt>Time</tt> instance that represents the time in +time_zone+.
