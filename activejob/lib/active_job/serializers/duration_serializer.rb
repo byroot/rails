@@ -6,7 +6,7 @@ module ActiveJob
       def serialize(duration)
         # Ideally duration.parts would be wrapped in an array before passing to Arguments.serialize,
         # but we continue passing the bare hash for backwards compatibility:
-        super("value" => duration.value, "parts" => Arguments.serialize(duration.parts))
+        super("value" => duration.value, "parts" => Arguments.serialize(duration.parts.flatten(1)))
       end
 
       def deserialize(hash)
