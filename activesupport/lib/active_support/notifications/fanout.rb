@@ -183,14 +183,14 @@ module ActiveSupport
 
       def group_listeners(listeners)
         listeners.group_by(&:group_class).transform_values do |s|
-          s.map(&:delegate)
-        end
+          s.map(&:delegate).freeze
+        end.freeze
       end
 
       def groups_for(name) # :nodoc:
         silenceable_groups, groups = @groups_for.compute_if_absent(name) do
           listeners = all_listeners_for(name)
-          listeners.partition(&:silenceable).map { |l| group_listeners(l).freeze }
+          listeners.partition(&:silenceable).map { |l| group_listeners(l) }
         end
 
         unless silenceable_groups.empty?
@@ -198,7 +198,8 @@ module ActiveSupport
             active_subscriptions = subscriptions.reject { |s| s.silenced?(name) }
             unless active_subscriptions.empty?
               groups = groups.dup if groups.frozen?
-              groups[group_class] = (groups[group_class] || []) + active_subscriptions
+              base_groups = groups[group_class]
+              groups[group_class] = base_groups ? base_groups + active_subscriptions : active_subscriptions
             end
           end
         end
