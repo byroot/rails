@@ -68,7 +68,8 @@ module ActiveRecord
 end
 
 ActiveSupport::Notifications.monotonic_subscribe("sql.active_record") do |name, start, finish, id, payload|
-  unless ["SCHEMA", "TRANSACTION"].include?(payload[:name])
+  query_name = payload[:name]
+  unless query_name == "TRANSACTION" || query_name == "SCHEMA"
     ActiveRecord::RuntimeRegistry.queries_count += 1
     ActiveRecord::RuntimeRegistry.cached_queries_count += 1 if payload[:cached]
   end
