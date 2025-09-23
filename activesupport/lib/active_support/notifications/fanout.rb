@@ -283,8 +283,8 @@ module ActiveSupport
         handle.finish_with_values(name, id, payload)
       end
 
-      def publish(name, *args)
-        iterate_guarding_exceptions(listeners_for(name)) { |s| s.publish(name, *args) }
+      def publish(name, ...)
+        iterate_guarding_exceptions(listeners_for(name)) { |s| s.publish(name, ...) }
       end
 
       def publish_event(event)
@@ -384,9 +384,9 @@ module ActiveSupport
             EventedGroup
           end
 
-          def publish(name, *args)
+          def publish(...)
             if @can_publish
-              @delegate.publish name, *args
+              @delegate.publish(...)
             end
           end
 
@@ -416,8 +416,8 @@ module ActiveSupport
             TimedGroup
           end
 
-          def publish(name, *args)
-            @delegate.call name, *args
+          def publish(...)
+            @delegate.call(...)
           end
         end
 
