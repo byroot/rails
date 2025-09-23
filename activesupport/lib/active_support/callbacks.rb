@@ -905,12 +905,13 @@ module ActiveSupport
           names.each do |name|
             name = name.to_sym
 
-            ([self] + self.descendants).each do |target|
-              target.set_callbacks name, CallbackChain.new(name, options)
-            end
-
             module_eval <<-RUBY, __FILE__, __LINE__ + 1
-              def _run_#{name}_callbacks(&block)
+              def _run_#{name}_callbacks
+                yield if block_given?
+              end
+              alias_method :_run_#{name}_callbacks, :_run_#{name}_callbacks
+
+              def _run_#{name}_callbacks!(&block)
                 run_callbacks #{name.inspect}, &block
               end
 
@@ -926,6 +927,10 @@ module ActiveSupport
                 __callbacks[#{name.inspect}]
               end
             RUBY
+
+            ([self] + self.descendants).each do |target|
+              target.set_callbacks name, CallbackChain.new(name, options)
+            end
           end
         end
 
@@ -942,6 +947,9 @@ module ActiveSupport
               self.__callbacks = __callbacks.dup
             end
             self.__callbacks[name.to_sym] = callbacks
+            unless callbacks.empty?
+              alias_method("_run_#{name}_callbacks", "_run_#{name}_callbacks!")
+            end
             self.__callbacks
           end
       end

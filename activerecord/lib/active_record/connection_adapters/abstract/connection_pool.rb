@@ -179,21 +179,29 @@ module ActiveRecord
         end
       end
 
-      class LeaseRegistry # :nodoc:
-        def initialize
-          @mutex = Mutex.new
-          @map = WeakThreadKeyMap.new
-        end
-
-        def [](context)
-          @mutex.synchronize do
-            @map[context] ||= Lease.new
+      if RUBY_ENGINE == "ruby"
+        class LeaseRegistry < WeakThreadKeyMap
+          def [](context)
+            super || (self[context] = Lease.new)
           end
         end
+      else
+        class LeaseRegistry # :nodoc:
+          def initialize
+            @mutex = Mutex.new
+            @map = WeakThreadKeyMap.new
+          end
 
-        def clear
-          @mutex.synchronize do
-            @map.clear
+          def [](context)
+            @mutex.synchronize do
+              @map[context] ||= Lease.new
+            end
+          end
+
+          def clear
+            @mutex.synchronize do
+              @map.clear
+            end
           end
         end
       end
@@ -651,10 +659,7 @@ module ActiveRecord
         conn.lock.synchronize do
           synchronize do
             connection_lease.clear(conn)
-
-            conn._run_checkin_callbacks do
-              conn.expire
-            end
+            conn.expire
 
             @available.add conn
           end
