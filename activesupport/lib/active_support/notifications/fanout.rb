@@ -53,7 +53,6 @@ module ActiveSupport
         @other_subscribers = []
         @all_listeners_for = Concurrent::Map.new
         @groups_for = Concurrent::Map.new
-        @silenceable_groups_for = Concurrent::Map.new
       end
 
       def inspect # :nodoc:
@@ -102,11 +101,9 @@ module ActiveSupport
         if key
           @all_listeners_for.delete(key)
           @groups_for.delete(key)
-          @silenceable_groups_for.delete(key)
         else
           @all_listeners_for.clear
           @groups_for.clear
-          @silenceable_groups_for.clear
         end
       end
 
@@ -184,24 +181,23 @@ module ActiveSupport
           end
       end
 
-      def groups_for(name) # :nodoc:
-        groups = @groups_for.compute_if_absent(name) do
-          all_listeners_for(name).reject(&:silenceable).group_by(&:group_class).transform_values do |s|
-            s.map(&:delegate)
-          end
+      def group_listeners(listeners)
+        listeners.group_by(&:group_class).transform_values do |s|
+          s.map(&:delegate)
         end
+      end
 
-        silenceable_groups = @silenceable_groups_for.compute_if_absent(name) do
-          all_listeners_for(name).select(&:silenceable).group_by(&:group_class).transform_values do |s|
-            s.map(&:delegate)
-          end
+      def groups_for(name) # :nodoc:
+        silenceable_groups, groups = @groups_for.compute_if_absent(name) do
+          listeners = all_listeners_for(name)
+          listeners.partition(&:silenceable).map { |l| group_listeners(l).freeze }
         end
 
         unless silenceable_groups.empty?
-          groups = groups.dup
           silenceable_groups.each do |group_class, subscriptions|
             active_subscriptions = subscriptions.reject { |s| s.silenced?(name) }
             unless active_subscriptions.empty?
+              groups = groups.dup if groups.frozen?
               groups[group_class] = (groups[group_class] || []) + active_subscriptions
             end
           end
