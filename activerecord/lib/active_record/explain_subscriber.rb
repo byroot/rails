@@ -29,6 +29,10 @@ module ActiveRecord
         !payload[:sql].match?(EXPLAINED_SQLS)
     end
 
+    def silenced?(event)
+      !ExplainRegistry.collect?
+    end
+
     ActiveSupport::Notifications.subscribe("sql.active_record", new)
   end
 end
