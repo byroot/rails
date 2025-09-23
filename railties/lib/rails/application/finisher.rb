@@ -133,6 +133,8 @@ module Rails
 
           if config.reloading_enabled?
             app.executor.register_hook(InterlockHook, outer: true)
+          else
+            ActiveSupport::Dependencies.interlock = ActiveSupport::Dependencies::NullInterlock.new
           end
         end
       end

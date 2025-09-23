@@ -51,5 +51,39 @@ module ActiveSupport # :nodoc:
         @lock.raw_state(&block)
       end
     end
+
+    class NullInterlock # :nodoc:
+      def loading
+        yield
+      end
+
+      def unloading
+        yield
+      end
+
+      def start_unloading
+      end
+
+      def done_unloading
+      end
+
+      def start_running
+      end
+
+      def done_running
+      end
+
+      def running
+        yield
+      end
+
+      def permit_concurrent_loads
+        yield
+      end
+
+      def raw_state
+        yield
+      end
+    end
   end
 end
