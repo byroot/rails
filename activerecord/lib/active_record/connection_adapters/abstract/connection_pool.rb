@@ -1270,10 +1270,7 @@ module ActiveRecord
         end
 
         def checkout_and_verify(c)
-          c._run_checkout_callbacks do
-            c.clean!
-          end
-          c
+          c.clean!
         rescue Exception
           remove c
           c.disconnect!

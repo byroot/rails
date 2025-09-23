@@ -830,8 +830,11 @@ module ActiveRecord
       end
 
       def clean! # :nodoc:
-        @raw_connection_dirty = false
-        @verified = nil
+        _run_checkout_callbacks do
+          @raw_connection_dirty = false
+          @verified = nil
+        end
+        self
       end
 
       def verified? # :nodoc:
