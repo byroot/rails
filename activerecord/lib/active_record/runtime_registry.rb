@@ -76,11 +76,11 @@ module ActiveRecord
   end
 end
 
-ActiveSupport::Notifications.monotonic_subscribe("sql.active_record") do |name, start, finish, id, payload|
-  ActiveRecord::RuntimeRegistry.record(
-    payload[:name],
-    (finish - start) * 1_000.0,
-    async: payload[:async],
-    lock_wait: payload[:lock_wait],
-  )
-end
+# ActiveSupport::Notifications.monotonic_subscribe("sql.active_record") do |name, start, finish, id, payload|
+#   ActiveRecord::RuntimeRegistry.record(
+#     payload[:name],
+#     (finish - start) * 1_000.0,
+#     async: payload[:async],
+#     lock_wait: payload[:lock_wait],
+#   )
+# end

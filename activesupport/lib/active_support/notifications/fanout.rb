@@ -224,13 +224,11 @@ module ActiveSupport
       class Handle
         include FanoutIteration
 
-        def initialize(notifier, name, id, payload) # :nodoc:
+        def initialize(notifier, name, id, groups, payload) # :nodoc:
           @name = name
           @id = id
           @payload = payload
-          @groups = notifier.groups_for(name).map do |group_klass, grouped_listeners|
-            group_klass.new(grouped_listeners, name, id, payload)
-          end
+          @groups = groups
           @state = :initialized
         end
 
@@ -264,10 +262,31 @@ module ActiveSupport
           end
       end
 
+      module NullHandle # :nodoc:
+        extend self
+
+        def start
+        end
+
+        def finish
+        end
+
+        def finish_with_values(_name, _id, _payload)
+        end
+      end
+
       include FanoutIteration
 
       def build_handle(name, id, payload)
-        Handle.new(self, name, id, payload)
+        groups = groups_for(name).map do |group_klass, grouped_listeners|
+          group_klass.new(grouped_listeners, name, id, payload)
+        end
+
+        if groups.empty?
+          NullHandle
+        else
+          Handle.new(self, name, id, groups, payload)
+        end
       end
 
       def start(name, id, payload)
