@@ -3,7 +3,7 @@
 module ActiveRecord
   # This is a thread locals registry for Active Record. For example:
   #
-  #   ActiveRecord::RuntimeRegistry.sql_runtime
+  #   ActiveRecord::RuntimeRegistry.stats.sql_runtime
   #
   # returns the connection handler local to the current unit of execution (either thread of fiber).
   module RuntimeRegistry # :nodoc:
@@ -17,7 +17,7 @@ module ActiveRecord
         @cached_queries_count = 0
       end
 
-      alias_method :reset, :initialize
+      public alias_method :reset, :initialize
 
       def reset_runtimes
         rt, self.sql_runtime = sql_runtime, 0.0
@@ -39,6 +39,15 @@ module ActiveRecord
     end
 
     extend self
+
+    def call(name, start, finish, id, payload)
+      record(
+        payload[:name],
+        (finish - start) * 1_000.0,
+        async: payload[:async],
+        lock_wait: payload[:lock_wait],
+      )
+    end
 
     def record(query_name, runtime, cached: false, async: false, lock_wait: nil)
       stats = self.stats
@@ -76,11 +85,4 @@ module ActiveRecord
   end
 end
 
-# ActiveSupport::Notifications.monotonic_subscribe("sql.active_record") do |name, start, finish, id, payload|
-#   ActiveRecord::RuntimeRegistry.record(
-#     payload[:name],
-#     (finish - start) * 1_000.0,
-#     async: payload[:async],
-#     lock_wait: payload[:lock_wait],
-#   )
-# end
+ActiveSupport::Notifications.monotonic_subscribe("sql.active_record", ActiveRecord::RuntimeRegistry)

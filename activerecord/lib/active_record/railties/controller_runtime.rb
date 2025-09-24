@@ -44,8 +44,9 @@ module ActiveRecord
             db_rt_before_render = ActiveRecord::RuntimeRegistry.reset_runtimes
             self.db_runtime = (db_runtime || 0) + db_rt_before_render
             runtime = super
-            queries_rt = ActiveRecord::RuntimeRegistry.sql_runtime - ActiveRecord::RuntimeRegistry.async_sql_runtime
-            db_rt_after_render = ActiveRecord::RuntimeRegistry.reset_runtimes
+            runtime_stats = ActiveRecord::RuntimeRegistry.stats
+            queries_rt = runtime_stats.sql_runtime - runtime_stats.async_sql_runtime
+            db_rt_after_render = runtime_stats.reset_runtimes
             self.db_runtime += db_rt_after_render
             runtime - queries_rt
           else

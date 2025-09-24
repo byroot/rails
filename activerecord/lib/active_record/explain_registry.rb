@@ -19,6 +19,7 @@ module ActiveRecord
             return if @subscribed
 
             ActiveSupport::Notifications.subscribe("sql.active_record", new)
+            @subscribed = true
           end
         end
       end
