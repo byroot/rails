@@ -180,6 +180,7 @@ module ActiveRecord
       end
 
       if RUBY_ENGINE == "ruby"
+        # Thanks to the GVL, the LeaseRegistry doesn't need to be synchronized on MRI
         class LeaseRegistry < WeakThreadKeyMap
           def [](context)
             super || (self[context] = Lease.new)
