@@ -39,6 +39,19 @@ module ActiveSupport
         true
       end
 
+      module NullSerializer
+        extend self
+
+        def load(string)
+          string
+        end
+
+        def dump(string)
+          raise "Uh? #{string.inspect}" unless string.is_a?(String)
+          String(string)
+        end
+      end
+
       prepend Strategy::LocalCache
 
       ESCAPE_KEY_CHARS = /[\x00-\x20%\x7F-\xFF]/n
@@ -89,7 +102,8 @@ module ActiveSupport
         @mem_cache_options = options.dup
         # The value "compress: false" prevents duplicate compression within Dalli.
         @mem_cache_options[:compress] = false
-        (OVERRIDDEN_OPTIONS - %i(compress)).each { |name| @mem_cache_options.delete(name) }
+        @mem_cache_options[:serializer] = NullSerializer
+        (OVERRIDDEN_OPTIONS - %i(compress serializer)).each { |name| @mem_cache_options.delete(name) }
         @data = self.class.build_mem_cache(*(addresses + [@mem_cache_options]))
       end
 
