@@ -768,7 +768,7 @@ module ActiveRecord
     VALID_UNSCOPING_VALUES = Set.new([:where, :select, :group, :order, :lock,
                                      :limit, :offset, :joins, :left_outer_joins, :annotate,
                                      :includes, :eager_load, :preload, :from, :readonly,
-                                     :having, :optimizer_hints, :with])
+                                     :having, :optimizer_hints, :index_hints, :with])
 
     # Removes an unwanted relation that is already defined on a chain of relations.
     # This is useful when passing around chains of relations and would like to
@@ -1493,6 +1493,15 @@ module ActiveRecord
       self
     end
 
+    def index_hints(hint, ...)
+      spawn.index_hints!(hint, ...)
+    end
+
+    def index_hints!(*args) # :nodoc:
+      self.index_hints_values |= args
+      self
+    end
+
     # Reverse the existing order clause on the relation.
     #
     #   User.order('name ASC').reverse_order # generated SQL has 'ORDER BY name DESC'
@@ -1763,6 +1772,7 @@ module ActiveRecord
         build_select(arel)
 
         arel.optimizer_hints(*optimizer_hints_values) unless optimizer_hints_values.empty?
+        arel.index_hints(*index_hints_values) unless index_hints_values.empty?
         arel.comment(*annotate_values) unless annotate_values.empty?
         arel.distinct(distinct_value)
         arel.from(build_from) unless from_clause.empty?

@@ -575,6 +575,10 @@ module ActiveRecord
         false
       end
 
+      def supports_index_hints?
+        false
+      end
+
       def supports_common_table_expressions?
         false
       end

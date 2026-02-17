@@ -154,6 +154,10 @@ module ActiveRecord
         !mariadb? && database_version >= "5.7.7"
       end
 
+      def supports_index_hints?
+        true
+      end
+
       def supports_common_table_expressions?
         if mariadb?
           database_version >= "10.2.1"

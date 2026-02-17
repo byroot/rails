@@ -53,7 +53,7 @@ module ActiveRecord
 
     MULTI_VALUE_METHODS  = [:includes, :eager_load, :preload, :select, :group,
                             :order, :joins, :left_outer_joins, :references,
-                            :extending, :unscope, :optimizer_hints, :annotate,
+                            :extending, :unscope, :optimizer_hints, :index_hints, :annotate,
                             :with]
 
     SINGLE_VALUE_METHODS = [:limit, :offset, :lock, :readonly, :reordering, :strict_loading,
