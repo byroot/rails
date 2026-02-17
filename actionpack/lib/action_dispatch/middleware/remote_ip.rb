@@ -70,7 +70,7 @@ module ActionDispatch
       @proxies = if custom_proxies.blank?
         TRUSTED_PROXIES
       elsif custom_proxies.respond_to?(:any?)
-        custom_proxies
+        custom_proxies.map { |p| p.is_a?(String) ? IPAddr.new(p) : p }
       else
         raise(ArgumentError, <<~EOM)
           Setting config.action_dispatch.trusted_proxies to a single value isn't
@@ -195,8 +195,16 @@ module ActionDispatch
       end
 
       def filter_proxies(ips) # :doc:
-        ips.reject do |ip|
-          @proxies.any? { |proxy| proxy === ip }
+        ips.reject do |raw_ip|
+          next true if raw_ip.nil?
+          ip = IPAddr.new(raw_ip)
+          @proxies.any? do |proxy|
+            if proxy.is_a?(IPAddr)
+              proxy.include?(ip)
+            else
+              proxy === raw_ip
+            end
+          end
         end
       end
     end
