@@ -219,8 +219,8 @@ module ActiveRecord
 
       deprecate :exec_insert, :exec_delete, :exec_update, deprecator: ActiveRecord.deprecator
 
-      def exec_insert_all(sql, name) # :nodoc:
-        intent = internal_build_intent(sql, name)
+      def exec_insert_all(inserter, name) # :nodoc:
+        intent = internal_build_intent(inserter.to_sql, name)
         intent.execute!
         intent.cast_result
       end
