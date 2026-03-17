@@ -71,7 +71,7 @@ group :doc do
 end
 
 # Active Support
-gem "dalli", ">= 3.0.1"
+gem "dalli", ">= 3.0.1", "< 5"
 gem "listen", "~> 3.3", require: false
 gem "libxml-ruby", platforms: :ruby
 gem "connection_pool", require: false
@@ -98,7 +98,7 @@ gem "useragent", require: false
 group :job do
   gem "resque", require: false
   gem "resque-scheduler", require: false
-  gem "sidekiq", require: false
+  gem "sidekiq", "< 8", require: false
   gem "queue_classic", ">= 4.0.0", require: false, platforms: :ruby
   gem "sneakers", require: false
   gem "backburner", require: false
