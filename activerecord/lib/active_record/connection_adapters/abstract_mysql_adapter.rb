@@ -896,6 +896,7 @@ module ActiveRecord
         # See https://dev.mysql.com/doc/mysql-errors/en/server-error-reference.html
         ER_DB_CREATE_EXISTS     = 1007
         ER_FILSORT_ABORT        = 1028
+        ER_NO_DB_ERROR          = 1046
         ER_DUP_ENTRY            = 1062
         ER_SERVER_SHUTDOWN      = 1053
         ER_NOT_NULL_VIOLATION   = 1048
@@ -928,7 +929,7 @@ module ActiveRecord
             else
               super
             end
-          when ER_CONNECTION_KILLED, ER_SERVER_SHUTDOWN, CR_SERVER_GONE_ERROR, CR_SERVER_LOST, ER_CLIENT_INTERACTION_TIMEOUT
+          when ER_CONNECTION_KILLED, ER_SERVER_SHUTDOWN, CR_SERVER_GONE_ERROR, CR_SERVER_LOST, ER_CLIENT_INTERACTION_TIMEOUT, ER_NO_DB_ERROR
             ConnectionFailed.new(message, sql: sql, binds: binds, connection_pool: @pool)
           when ER_DB_CREATE_EXISTS
             DatabaseAlreadyExists.new(message, sql: sql, binds: binds, connection_pool: @pool)
