@@ -65,6 +65,12 @@ module ActiveSupport
         @worker_count
       end
 
+      # How long to wait for workers to exit during shutdown before
+      # force-killing them. Must be long enough for normal cleanup
+      # (parallelize_teardown hooks, DRb deregistration) but short
+      # enough to avoid stalling CI pipelines indefinitely.
+      SHUTDOWN_TIMEOUT = 30 # seconds
+
       def shutdown
         dead_worker_pids = @worker_pool.filter_map do |pid|
           Process.waitpid(pid, Process::WNOHANG)
@@ -74,12 +80,55 @@ module ActiveSupport
         @queue_server.remove_dead_workers(dead_worker_pids)
 
         @queue_server.shutdown
-        @worker_pool.each do |pid|
-          Process.waitpid(pid)
+        wait_for_workers
+      end
+
+      private
+        def wait_for_workers
+          deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + SHUTDOWN_TIMEOUT
+
+          @worker_pool.each do |pid|
+            remaining = deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+            if remaining <= 0
+              force_kill_workers
+              return
+            end
+
+            wait_for_worker(pid, remaining)
+          end
+        end
+
+        def wait_for_worker(pid, timeout)
+          deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+
+          loop do
+            return if Process.waitpid(pid, Process::WNOHANG)
+
+            if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+              force_kill_workers
+              return
+            end
+
+            sleep 0.1
+          end
         rescue Errno::ECHILD
           nil
         end
-      end
+
+        def force_kill_workers
+          @worker_pool.each do |pid|
+            Process.kill("KILL", pid)
+          rescue Errno::ESRCH
+            nil
+          end
+
+          @worker_pool.each do |pid|
+            Process.waitpid(pid)
+          rescue Errno::ECHILD
+            nil
+          end
+        end
     end
   end
 end
