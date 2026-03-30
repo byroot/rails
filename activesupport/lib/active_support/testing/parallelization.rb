@@ -79,8 +79,10 @@ module ActiveSupport
         end
         @queue_server.remove_dead_workers(dead_worker_pids)
 
-        @queue_server.shutdown
+        Timeout.timeout(SHUTDOWN_TIMEOUT) { @queue_server.shutdown }
         wait_for_workers
+      rescue Timeout::Error
+        force_kill_workers
       end
 
       private
