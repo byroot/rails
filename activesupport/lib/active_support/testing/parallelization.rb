@@ -83,6 +83,7 @@ module ActiveSupport
         wait_for_workers
       rescue Timeout::Error
         force_kill_workers
+        @queue_server.remove_dead_workers(@worker_pool)
       end
 
       private
@@ -94,6 +95,7 @@ module ActiveSupport
 
             if remaining <= 0
               force_kill_workers
+              @queue_server.remove_dead_workers(@worker_pool)
               return
             end
 
@@ -109,6 +111,7 @@ module ActiveSupport
 
             if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
               force_kill_workers
+              @queue_server.remove_dead_workers(@worker_pool)
               return
             end
 
