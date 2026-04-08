@@ -46,15 +46,16 @@ class ParallelizationTest < ActiveSupport::TestCase
 
     parallelization.start
 
-    sleep 0.5
+    assert_active_workers(server)
 
-    assert server.active_workers?
+    assert_predicate server, :active_workers?
 
     worker_pids = parallelization.instance_variable_get(:@worker_pool)
     Process.kill("KILL", worker_pids.first)
-    sleep 0.25
 
-    Timeout.timeout(2.5, Minitest::Assertion, "Expected shutdown to not hang") { parallelization.shutdown }
+    Timeout.timeout(2.5, Minitest::Assertion, "Expected shutdown to not hang") do
+      parallelization.shutdown
+    end
     assert_not server.active_workers?
   end
 
@@ -80,8 +81,7 @@ class ParallelizationTest < ActiveSupport::TestCase
     end
     parallelization.instance_variable_set(:@worker_pool, [worker_pid])
 
-    sleep 0.25
-    assert server.active_workers?
+    assert_active_workers(server)
 
     # Schedule the kill AFTER shutdown begins, so the initial WNOHANG sweep
     # in Parallelization#shutdown finds the worker still alive
@@ -106,32 +106,33 @@ class ParallelizationTest < ActiveSupport::TestCase
     blocking_distributor = ActiveSupport::Testing::Parallelization::SharedQueueDistributor.new
     server.instance_variable_set(:@distributor, blocking_distributor)
 
+    r, w = IO.pipe
     worker_pid = fork do
       DRb.stop_service
       queue = DRbObject.new_with_uri(url)
       queue.start_worker(0, Process.pid)
-      sleep 999 # stuck alive — never exits, never calls stop_worker
+      r.close
+      w.close
+      sleep(10) # stuck alive — never exits, never calls stop_worker
+      exit!(0)
     end
     parallelization.instance_variable_set(:@worker_pool, [worker_pid])
 
-    sleep 0.25
+    w.close
+    r.wait_readable(2) # wait for worker to register and deregister
+    r.close
+
     assert server.active_workers?
 
-    # Use a short timeout for the test so it doesn't take 30s
-    original_timeout = ActiveSupport::Testing::Parallelization::SHUTDOWN_TIMEOUT
-    ActiveSupport::Testing::Parallelization.send(:remove_const, :SHUTDOWN_TIMEOUT)
-    ActiveSupport::Testing::Parallelization.const_set(:SHUTDOWN_TIMEOUT, 1)
-
-    Timeout.timeout(5, Minitest::Assertion, "Expected shutdown to not hang") { parallelization.shutdown }
+    stub_const(ActiveSupport::Testing::Parallelization, :SHUTDOWN_TIMEOUT, 0.1) do
+      Timeout.timeout(5, Minitest::Assertion, "Expected shutdown to not hang") do
+        parallelization.shutdown
+      end
+    end
     assert_not server.active_workers?
 
     # Worker should have been killed
     assert_raises(Errno::ECHILD) { Process.waitpid(worker_pid, Process::WNOHANG) }
-  ensure
-    if original_timeout
-      ActiveSupport::Testing::Parallelization.send(:remove_const, :SHUTDOWN_TIMEOUT)
-      ActiveSupport::Testing::Parallelization.const_set(:SHUTDOWN_TIMEOUT, original_timeout)
-    end
   end
 
   test "shutdown force-kills workers that deregistered but are stuck during exit" do
@@ -146,31 +147,31 @@ class ParallelizationTest < ActiveSupport::TestCase
     blocking_distributor = ActiveSupport::Testing::Parallelization::SharedQueueDistributor.new
     server.instance_variable_set(:@distributor, blocking_distributor)
 
+    r, w = IO.pipe
     worker_pid = fork do
       DRb.stop_service
       queue = DRbObject.new_with_uri(url)
       queue.start_worker(0, Process.pid)
-      sleep 0.5
       queue.stop_worker(0, Process.pid) # deregisters successfully
-      sleep 999 # stuck alive during exit
+      r.close
+      w.close
+      sleep(10) # stuck alive during exit
+      exit!(0)
     end
     parallelization.instance_variable_set(:@worker_pool, [worker_pid])
 
-    sleep 1 # wait for worker to register and deregister
+    w.close
+    r.wait_readable(2) # wait for worker to register and deregister
+    r.close
 
-    original_timeout = ActiveSupport::Testing::Parallelization::SHUTDOWN_TIMEOUT
-    ActiveSupport::Testing::Parallelization.send(:remove_const, :SHUTDOWN_TIMEOUT)
-    ActiveSupport::Testing::Parallelization.const_set(:SHUTDOWN_TIMEOUT, 1)
-
-    Timeout.timeout(5, Minitest::Assertion, "Expected shutdown to not hang") { parallelization.shutdown }
+    stub_const(ActiveSupport::Testing::Parallelization, :SHUTDOWN_TIMEOUT, 0.1) do
+      Timeout.timeout(5, Minitest::Assertion, "Expected shutdown to not hang") do
+        parallelization.shutdown
+      end
+    end
     assert_not server.active_workers?
 
     assert_raises(Errno::ECHILD) { Process.waitpid(worker_pid, Process::WNOHANG) }
-  ensure
-    if original_timeout
-      ActiveSupport::Testing::Parallelization.send(:remove_const, :SHUTDOWN_TIMEOUT)
-      ActiveSupport::Testing::Parallelization.const_set(:SHUTDOWN_TIMEOUT, original_timeout)
-    end
   end
 
   test "seeded distribution assigns tests to workers round-robin" do
@@ -387,4 +388,16 @@ class ParallelizationTest < ActiveSupport::TestCase
       end
     end
   end
+
+  private
+    def assert_active_workers(server, timeout: 1)
+      (timeout.to_f / 0.02).floor.times do
+        if server.active_workers?
+          break
+        else
+          sleep 0.02
+        end
+      end
+      assert_predicate server, :active_workers?
+    end
 end
