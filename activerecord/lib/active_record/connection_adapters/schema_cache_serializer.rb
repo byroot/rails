@@ -142,14 +142,36 @@ module ActiveRecord
             end
           end
           result = coder.dump(cache)
-          schema = JSON.dump({schema: JSON::Fragment.new(result), references: references.map { |d| JSON::Fragment.new(d) } })
+          schema = JSON.dump(references.map { |d| JSON::Fragment.new(d) })
 
           puts schema
           schema
         end
 
+        class ReferenceList
+          def initialize(references)
+            @references = references
+          end
+
+          def [](index)
+            entry = @references[index]
+            if entry.is_a?(Hash)
+              entry = @references[index] = load_reference(entry)
+            end
+            entry
+          end
+
+          def load_reference(object)
+            klass = JSONSchemaCacheSerializer.class_for(object.fetch("_type"))
+            instance = klass.allocate
+            instance.init_from_schema_json(object, self)
+            instance
+          end
+        end
+
         def load(data)
-          CODER.load(data)
+          references = ReferenceList.new(JSON.load(data))
+          references[0]
         end
       end
     end

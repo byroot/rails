@@ -297,9 +297,18 @@ module ActiveRecord
         data
       end
 
-      def init_from_schema_json(coder)
+      def init_from_schema_json(coder, references)
         coder["data_sources"] = coder["data_sources"].index_with { |table_name| true }
-        init_with(coder)
+
+        @columns          = coder["columns"].transform_values { |columns| columns.map { |i| references[i] } }
+        p @columns
+        @columns_hash     = coder["columns_hash"].transform_values { |i| references[i] }
+        @primary_keys     = coder["primary_keys"]
+        @data_sources     = coder["data_sources"]
+        @indexes          = coder["indexes"] || {}
+        @version          = coder["version"]
+
+        nil
       end
 
       def cached?(table_name)
