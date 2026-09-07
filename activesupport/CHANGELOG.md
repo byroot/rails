@@ -1,3 +1,8 @@
+*   Fix loading Active Support on Ruby implementations that do not define
+    `Ractor`, such as JRuby 10.
+
+    *Nicolas Vandenbogaerde*
+
 *   Preserve the requested key order in `ActiveSupport::Cache::Store#fetch_multi`
     when a local cache is active.
 
